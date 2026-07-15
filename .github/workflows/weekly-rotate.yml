@@ -1,0 +1,63 @@
+name: Weekly key rotation
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # rotateKey.ts internally runs the SAME scrape as the daily job before
+      # rotating, so rotation day's data isn't lost or duplicated across two
+      # separate runs. It then generates a fresh 256-bit key, updates the repo
+      # variable via the GitHub REST API (PATCH /repos/{owner}/{repo}/actions/
+      # variables/MYCAMP_ENCRYPTION_KEY, authenticated with the fine-grained
+      # PAT in secrets.MYCAMP_VARS_PAT — see README), and re-encrypts the full
+      # history with the new key.
+      - name: Scrape, rotate key, re-encrypt history
+        env:
+          MYCAMP_ENCRYPTION_KEY: ${{ vars.MYCAMP_ENCRYPTION_KEY }}
+          MYCAMP_VARS_PAT: ${{ secrets.MYCAMP_VARS_PAT }}
+          MYCAMP_ADULTS: ${{ secrets.MYCAMP_ADULTS }}
+          MYCAMP_CHILDREN_AGES: ${{ secrets.MYCAMP_CHILDREN_AGES }}
+          MYCAMP_SEARCH_START_DATE: ${{ secrets.MYCAMP_SEARCH_START_DATE }}
+          MYCAMP_SEARCH_END_DATE: ${{ secrets.MYCAMP_SEARCH_END_DATE }}
+          MYCAMP_STAY_DURATIONS: ${{ secrets.MYCAMP_STAY_DURATIONS }}
+          MYCAMP_ARRIVAL_WEEKDAYS: ${{ secrets.MYCAMP_ARRIVAL_WEEKDAYS }}
+        run: npm run rotate-key
+
+      - name: Commit and push the re-encrypted history
+        id: commit
+        run: |
+          if git diff --quiet -- data/encrypted-history.json; then
+            echo "No data changes — skipping commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "mycamp-bot"
+            git config user.email "mycamp-bot@users.noreply.github.com"
+            git add data/encrypted-history.json
+            git commit -m "chore: update camping availability data [skip ci]"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Redeploy dashboard with fresh data
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref main

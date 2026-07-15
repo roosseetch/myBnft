@@ -1,0 +1,69 @@
+name: Daily scrape
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # once daily, 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      reset_history:
+        description: 'Set to "1" to discard undecryptable history and start fresh (recovery escape hatch)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write # push the updated encrypted history
+  actions: write # dispatch the Pages deploy after new data lands (see note below)
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm # keyed on package-lock.json
+
+      - run: npm ci
+
+      - name: Scrape availability and update encrypted history
+        env:
+          # Deliberately a repo VARIABLE, not a secret — the owner must be able
+          # to read it back out via the Settings UI/API to decrypt the dashboard.
+          MYCAMP_ENCRYPTION_KEY: ${{ vars.MYCAMP_ENCRYPTION_KEY }}
+          # Family config lives in SECRETS: children's ages / family composition
+          # are personal data, so keep them out of the Settings→Variables listing.
+          MYCAMP_ADULTS: ${{ secrets.MYCAMP_ADULTS }}
+          MYCAMP_CHILDREN_AGES: ${{ secrets.MYCAMP_CHILDREN_AGES }}
+          MYCAMP_SEARCH_START_DATE: ${{ secrets.MYCAMP_SEARCH_START_DATE }}
+          MYCAMP_SEARCH_END_DATE: ${{ secrets.MYCAMP_SEARCH_END_DATE }}
+          MYCAMP_STAY_DURATIONS: ${{ secrets.MYCAMP_STAY_DURATIONS }}
+          MYCAMP_ARRIVAL_WEEKDAYS: ${{ secrets.MYCAMP_ARRIVAL_WEEKDAYS }}
+          MYCAMP_RESET_HISTORY: ${{ github.event.inputs.reset_history }}
+        run: npm run scrape
+
+      - name: Commit and push if the data changed
+        id: commit
+        run: |
+          if git diff --quiet -- data/encrypted-history.json; then
+            echo "No data changes — skipping commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "mycamp-bot"
+            git config user.email "mycamp-bot@users.noreply.github.com"
+            git add data/encrypted-history.json
+            git commit -m "chore: update camping availability data [skip ci]"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Pushes made with GITHUB_TOKEN never trigger other workflows (GitHub's
+      # recursion guard), and the Pages artifact snapshots data/ at deploy time —
+      # so a fresh Pages deploy must be dispatched explicitly for the dashboard
+      # to see today's data. Cheap: the site is two small files.
+      - name: Redeploy dashboard with fresh data
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref main

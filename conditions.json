@@ -1,0 +1,9 @@
+{
+  "adults": 1,
+  "children": [],
+  "searchStartDate": null,
+  "searchEndDate": "2026-12-31",
+  "stayDurations": [7],
+  "arrivalWeekdays": [1],
+  "excludedCategories": ["campsite", "caravan", "other"]
+}
