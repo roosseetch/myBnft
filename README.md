@@ -82,11 +82,19 @@ npm test          # vitest: date windows, conditions merge, crypto round-trip, A
 npm run typecheck
 npm run lint
 npm run scrape    # needs MYCAMP_ENCRYPTION_KEY in the environment
+
+# One-off manual query against the live API — no encryption key, no history file.
+# Driven by the same MYCAMP_* variables as the real scrape (falling back to
+# conditions.json for anything not set); prints raw vs. filtered counts per window.
+MYCAMP_ADULTS=2 MYCAMP_CHILDREN_AGES=2,5 \
+MYCAMP_SEARCH_START_DATE=2026-09-01 MYCAMP_SEARCH_END_DATE=2026-09-07 \
+MYCAMP_ARRIVAL_WEEKDAYS=1,2,3,4,5 MYCAMP_STAY_DURATIONS=6 \
+npm run debug-search
 ```
 
 Notable implementation details (see code comments for the full story):
 
-- **API quirks handled defensively** (`src/api/campingCare.ts`): no `offset` pagination (unreliable) — one big `limit=500` request with a loud truncation warning if the response length hits the limit exactly; an optimistic `young_children` age split with automatic fallback to a lumped `children` bucket (and a warning to manually verify the youngest child's pricing); campsite ids extracted from thumbnail URLs; category filtering via **denylist** so new accommodation types appear by default.
+- **API quirks handled defensively** (`src/api/campingCare.ts`): no `offset` pagination (unreliable) — one big `limit=500` request with a loud truncation warning if the response length hits the limit exactly; an optimistic `young_children` age split with automatic fallback to a lumped `children` bucket (and a warning to manually verify the youngest child's pricing); campsite ids extracted from thumbnail URLs; category filtering via **denylist** so new accommodation types appear by default; each result's `id` field is an opaque string (`"acc_..."`) — the real numeric accommodation id used for booking urls is the separate `numeric_id` field.
 - The API token in `campingCare.ts` is camping.care's **publishable** (`pub_…`) key as served to every visitor of `camping.tcs.ch` — recapture it via browser devtools (Network tab on the TCS campsite search, filter `accommodations/search`) if it's ever rotated.
 - Minimum accommodation capacity is always **derived** (`adults + children.length`) — there is intentionally no config field for it.
 - Crypto is Web Crypto AES-GCM-256 on both sides (Node ≥19 and the browser share the exact same blob shape: `{ iv, ciphertext }`, fresh random IV per write).

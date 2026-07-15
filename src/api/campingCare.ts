@@ -84,7 +84,10 @@ export function buildBookingUrl(accommodationId: number): string {
 }
 
 export interface RawAccommodation {
-  id: number;
+  /** Opaque string id (e.g. "acc_..."); NOT the numeric accommodation id — see numeric_id. */
+  id: string;
+  /** The actual numeric accommodation id used everywhere else (booking urls, live-cache lookups). */
+  numeric_id?: number;
   name?: string;
   category?: string;
   persons_max?: number;
@@ -116,11 +119,15 @@ async function requestOnce(
   });
   if (!res.ok) return { ok: false, status: res.status, items: [] };
   const body = (await res.json()) as unknown;
+  // The real response shape is { data: [...] } — bare-array and { accommodations }
+  // are kept as defensive fallbacks in case the API's wrapper ever changes.
   const items = Array.isArray(body)
     ? (body as RawAccommodation[])
-    : Array.isArray((body as any)?.accommodations)
-      ? ((body as any).accommodations as RawAccommodation[])
-      : [];
+    : Array.isArray((body as any)?.data)
+      ? ((body as any).data as RawAccommodation[])
+      : Array.isArray((body as any)?.accommodations)
+        ? ((body as any).accommodations as RawAccommodation[])
+        : [];
   return { ok: true, status: res.status, items };
 }
 
@@ -185,12 +192,12 @@ export function toCampMatch(
 ): CampMatch | null {
   const adminId = extractAdminId(raw.thumbnail);
   const price = typeof raw.price_total === 'number' ? raw.price_total : raw.price;
-  if (typeof raw.id !== 'number' || adminId === null) return null;
+  if (typeof raw.numeric_id !== 'number' || adminId === null) return null;
   return {
     scrapedAt,
     adminId,
-    accommodationId: raw.id,
-    name: raw.name ?? `Accommodation ${raw.id}`,
+    accommodationId: raw.numeric_id,
+    name: raw.name ?? `Accommodation ${raw.numeric_id}`,
     category: raw.category ?? 'unknown',
     personsMax: typeof raw.persons_max === 'number' ? raw.persons_max : 0,
     arrival: window.arrival,
@@ -198,6 +205,6 @@ export function toCampMatch(
     durationNights: window.durationNights,
     priceTotal: typeof price === 'number' ? price : 0,
     currency: 'CHF',
-    bookingUrl: buildBookingUrl(raw.id),
+    bookingUrl: buildBookingUrl(raw.numeric_id),
   };
 }

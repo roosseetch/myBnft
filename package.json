@@ -9,6 +9,7 @@
   },
   "scripts": {
     "scrape": "tsx src/scrape.ts",
+    "debug-search": "tsx src/debugSearch.ts",
     "rotate-key": "tsx src/rotateKey.ts",
     "init-key": "tsx src/initKey.ts",
     "test": "vitest run",

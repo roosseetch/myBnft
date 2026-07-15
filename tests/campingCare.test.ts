@@ -46,12 +46,21 @@ describe('searchWindow', () => {
   it('uses the optimistic young_children split when the API accepts it', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       expect(decodeURIComponent(url)).toContain('"young_children"');
-      return jsonResponse([{ id: 1, thumbnail: 'https://cdn/administration/42/x.jpg' }]);
+      // Real API wraps results in { data: [...] }, not a bare array (regression).
+      return jsonResponse({ data: [{ id: 'acc_1', numeric_id: 1, thumbnail: 'https://cdn/administration/42/x.jpg' }] });
     });
     const result = await searchWindow(window, family, fetchMock as any, () => {});
     expect(result.usedLumpedFallback).toBe(false);
     expect(result.accommodations).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('parses the real { data: [...] } response wrapper (regression: code used to only accept a bare array or { accommodations })', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ data: [{ id: 'acc_9', numeric_id: 9 }, { id: 'acc_10', numeric_id: 10 }] }),
+    );
+    const result = await searchWindow(window, { adults: 1, children: [] }, fetchMock as any, () => {});
+    expect(result.accommodations).toHaveLength(2);
   });
 
   it('falls back to lumped "children" on a 400 and logs the eligibility warning', async () => {
@@ -110,9 +119,11 @@ describe('extractAdminId', () => {
 
 describe('toCampMatch', () => {
   it('builds a CampMatch including the fallback booking URL', () => {
+    // "id" is the API's opaque string id — accommodationId must come from numeric_id (see bug below).
     const match = toCampMatch(
       {
-        id: 991,
+        id: 'acc_991',
+        numeric_id: 991,
         name: 'Family Pod',
         category: 'pod',
         persons_max: 4,
@@ -134,7 +145,17 @@ describe('toCampMatch', () => {
     });
   });
 
+  it('returns null when numeric_id is missing (regression: "id" is always a string, never the numeric id)', () => {
+    expect(
+      toCampMatch(
+        { id: 'acc_1', thumbnail: 'https://cdn.camping.care/administration/55/p.jpg' },
+        window,
+        '2026-07-14T06:00:00.000Z',
+      ),
+    ).toBeNull();
+  });
+
   it('returns null when the campsite id cannot be derived', () => {
-    expect(toCampMatch({ id: 1 }, window, '2026-07-14T06:00:00.000Z')).toBeNull();
+    expect(toCampMatch({ id: 'acc_1', numeric_id: 1 }, window, '2026-07-14T06:00:00.000Z')).toBeNull();
   });
 });
