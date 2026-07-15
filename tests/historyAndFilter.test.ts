@@ -7,6 +7,7 @@ function match(overrides: Partial<CampMatch>): CampMatch {
   return {
     scrapedAt: '2026-07-14T06:00:00.000Z',
     adminId: '1',
+    locationName: 'Test Campsite',
     accommodationId: 100,
     name: 'Pod',
     category: 'pod',
@@ -16,7 +17,7 @@ function match(overrides: Partial<CampMatch>): CampMatch {
     durationNights: 2,
     priceTotal: 200,
     currency: 'CHF',
-    bookingUrl: 'https://booking.camping.care/_/accommodations/100?accommodation=100',
+    bookingUrl: 'https://booking.camping.care/test-campsite/accommodations/100?accommodation=100',
     ...overrides,
   };
 }

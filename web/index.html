@@ -189,75 +189,86 @@
         outline-offset: 2px;
       }
 
-      .grid {
-        display: grid;
-        gap: 14px;
-        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-      }
-      .card {
-        background: var(--card);
+      .table-wrap {
+        overflow-x: auto;
         border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 16px 16px 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        background: var(--card);
       }
-      .card .top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 8px;
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
       }
-      .card h2 {
-        font-size: 16.5px;
-        margin: 0;
-        line-height: 1.3;
+      th,
+      td {
+        padding: 10px 14px;
+        text-align: left;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--line);
       }
-      .pill {
+      th {
         font-size: 11.5px;
         font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        padding: 3px 9px;
+        color: var(--ink-soft);
+        background: #f3f2ec;
+        position: sticky;
+        top: 0;
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      tbody tr:hover {
+        background: #f7f6f1;
+      }
+      td.name-cell {
+        white-space: normal;
+        min-width: 160px;
+      }
+      td.name-cell .name {
+        font-weight: 600;
+      }
+      .pill {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px;
         border-radius: 999px;
         white-space: nowrap;
         background: #e9efe7;
         color: var(--pine-deep);
       }
-      .price {
-        font-size: 21px;
+      td.price-cell {
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
-      .price small {
-        font-size: 12px;
+      td.price-cell small {
+        font-size: 11.5px;
         font-weight: 600;
         color: var(--ink-soft);
         margin-left: 3px;
       }
-      .facts {
-        font-size: 13.5px;
-        color: var(--ink-soft);
-        display: grid;
-        gap: 2px;
-      }
-      .facts b {
-        color: var(--ink);
+      a.book,
+      span.book-unavailable {
+        font-size: 13px;
         font-weight: 600;
-      }
-      .card a.book {
-        margin-top: 4px;
-        align-self: flex-start;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--pine);
         text-decoration: none;
+      }
+      a.book {
+        color: var(--pine);
         border-bottom: 1.5px solid var(--pine);
       }
-      .card a.book:hover {
+      a.book:hover {
         color: var(--pine-deep);
         border-color: var(--pine-deep);
+      }
+      span.book-unavailable {
+        color: var(--ink-soft);
+        font-weight: 400;
+        font-style: italic;
       }
       .empty {
         color: var(--ink-soft);
@@ -299,7 +310,23 @@
           <button type="button" data-sort="price" aria-pressed="true">Price ↑</button>
           <button type="button" data-sort="arrival" aria-pressed="false">Arrival date</button>
         </div>
-        <div class="grid" id="grid"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Accommodation</th>
+                <th>Sleeps</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Nights</th>
+                <th>Price</th>
+                <th>Book</th>
+              </tr>
+            </thead>
+            <tbody id="grid"></tbody>
+          </table>
+        </div>
         <p class="empty" id="emptyMsg" hidden>
           No matches stored yet — check back after the next daily run.
         </p>
@@ -358,40 +385,58 @@
           );
           grid.replaceChildren(
             ...sorted.map((m) => {
-              const card = document.createElement('article');
-              card.className = 'card';
+              const row = document.createElement('tr');
 
-              const top = document.createElement('div');
-              top.className = 'top';
-              const h2 = document.createElement('h2');
-              h2.textContent = m.name;
+              const location = document.createElement('td');
+              location.textContent = m.locationName ?? `Admin ${m.adminId}`;
+
+              const nameCell = document.createElement('td');
+              nameCell.className = 'name-cell';
+              const nameSpan = document.createElement('span');
+              nameSpan.className = 'name';
+              nameSpan.textContent = m.name;
               const pill = document.createElement('span');
               pill.className = 'pill';
               pill.textContent = m.category;
-              top.append(h2, pill);
+              nameCell.append(nameSpan, document.createTextNode(' '), pill);
 
-              const price = document.createElement('div');
-              price.className = 'price';
+              const sleeps = document.createElement('td');
+              sleeps.textContent = String(m.personsMax);
+
+              const arrival = document.createElement('td');
+              arrival.textContent = fmtDate(m.arrival);
+
+              const departure = document.createElement('td');
+              departure.textContent = fmtDate(m.departure);
+
+              const nights = document.createElement('td');
+              nights.textContent = String(m.durationNights);
+
+              const price = document.createElement('td');
+              price.className = 'price-cell';
               price.textContent = chf.format(m.priceTotal);
               const cur = document.createElement('small');
               cur.textContent = m.currency;
               price.append(cur);
 
-              const facts = document.createElement('div');
-              facts.className = 'facts';
-              facts.innerHTML =
-                `<span><b>${fmtDate(m.arrival)}</b> \u2192 <b>${fmtDate(m.departure)}</b> \u00b7 ${m.durationNights} night${m.durationNights === 1 ? '' : 's'}</span>` +
-                `<span>Sleeps up to ${m.personsMax} \u00b7 campsite #${m.adminId}</span>`;
+              const bookCell = document.createElement('td');
+              if (m.bookingUrl) {
+                const link = document.createElement('a');
+                link.className = 'book';
+                link.href = m.bookingUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = 'Check \u2197';
+                bookCell.append(link);
+              } else {
+                const span = document.createElement('span');
+                span.className = 'book-unavailable';
+                span.textContent = 'link unavailable';
+                bookCell.append(span);
+              }
 
-              const link = document.createElement('a');
-              link.className = 'book';
-              link.href = m.bookingUrl;
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
-              link.textContent = 'Check availability \u2197';
-
-              card.append(top, price, facts, link);
-              return card;
+              row.append(location, nameCell, sleeps, arrival, departure, nights, price, bookCell);
+              return row;
             }),
           );
           $('emptyMsg').hidden = matches.length > 0;

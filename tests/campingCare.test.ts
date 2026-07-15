@@ -105,6 +105,18 @@ describe('searchWindow', () => {
   });
 });
 
+describe('buildBookingUrl', () => {
+  it('builds a real booking link when the campsite slug is known', () => {
+    expect(buildBookingUrl(182027, 'tcs-camping-salavaux-plage')).toBe(
+      'https://booking.camping.care/tcs-camping-salavaux-plage/accommodations/182027?accommodation=182027',
+    );
+  });
+
+  it('returns null instead of a placeholder link when the slug is unknown', () => {
+    expect(buildBookingUrl(182027, null)).toBeNull();
+  });
+});
+
 describe('extractAdminId', () => {
   it('pulls the id out of a thumbnail URL', () => {
     expect(extractAdminId('https://cdn.camping.care/administration/12345/photos/1.jpg')).toBe(
@@ -118,8 +130,9 @@ describe('extractAdminId', () => {
 });
 
 describe('toCampMatch', () => {
-  it('builds a CampMatch including the fallback booking URL', () => {
+  it('builds a CampMatch, falling back gracefully when the admin id is not in campsites.json', () => {
     // "id" is the API's opaque string id — accommodationId must come from numeric_id (see bug below).
+    // admin 55 is not a real admin id, so this exercises the "unknown campsite" fallback path.
     const match = toCampMatch(
       {
         id: 'acc_991',
@@ -135,13 +148,14 @@ describe('toCampMatch', () => {
     );
     expect(match).toMatchObject({
       adminId: '55',
+      locationName: 'Admin 55',
       accommodationId: 991,
       name: 'Family Pod',
       category: 'pod',
       personsMax: 4,
       priceTotal: 210.5,
       currency: 'CHF',
-      bookingUrl: buildBookingUrl(991),
+      bookingUrl: null,
     });
   });
 

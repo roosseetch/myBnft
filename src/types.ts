@@ -22,6 +22,8 @@ export interface Conditions {
 export interface CampMatch {
   scrapedAt: string; // ISO timestamp
   adminId: string;
+  /** Campsite display name, e.g. "TCS Camping Salavaux Plage" — falls back to `Admin ${adminId}` when the campsite isn't in campsites.json yet. */
+  locationName: string;
   accommodationId: number;
   name: string; // e.g. "Family Pod"
   category: string;
@@ -31,7 +33,8 @@ export interface CampMatch {
   durationNights: number;
   priceTotal: number;
   currency: 'CHF';
-  bookingUrl: string;
+  /** null when the campsite's booking slug isn't in campsites.json yet — no working link can be built without it. */
+  bookingUrl: string | null;
 }
 
 /** Plaintext shape of data/encrypted-history.json once decrypted. */
@@ -39,6 +42,12 @@ export interface HistoryFile {
   /** Increments on each key rotation — for debugging/sanity only. */
   keyVersion: number;
   matches: CampMatch[];
+}
+
+/** One entry in src/config/campsites.json — see src/updateCampsites.ts. */
+export interface CampsiteInfo {
+  slug: string;
+  name: string;
 }
 
 /** One candidate (arrival, duration) query window. */

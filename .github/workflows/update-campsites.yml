@@ -1,0 +1,38 @@
+name: Update campsite directory
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # weekly, Sunday 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # push an updated campsites.json
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Rebuild the admin id → campsite slug/name table
+        run: npm run update-campsites
+
+      - name: Commit and push if the table changed
+        run: |
+          if git diff --quiet -- src/config/campsites.json; then
+            echo "No changes — skipping commit."
+          else
+            git config user.name "mycamp-bot"
+            git config user.email "mycamp-bot@users.noreply.github.com"
+            git add src/config/campsites.json
+            git commit -m "chore: update campsite slug/name directory [skip ci]"
+            git push
+          fi

@@ -1,4 +1,16 @@
-import type { CampMatch, Conditions, DateWindow } from '../types.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import type { CampMatch, CampsiteInfo, Conditions, DateWindow } from '../types.js';
+
+/** admin id -> { slug, name }, built by `npm run update-campsites` (see src/updateCampsites.ts). */
+function loadCampsites(): Record<string, CampsiteInfo> {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const file = path.resolve(here, '../config/campsites.json');
+  return JSON.parse(readFileSync(file, 'utf8')) as Record<string, CampsiteInfo>;
+}
+
+const CAMPSITES = loadCampsites();
 
 /**
  * Publishable/public API token for the TCS Camping instance of camping.care.
@@ -75,12 +87,15 @@ export function extractAdminId(thumbnailUrl: string | undefined | null): string 
 }
 
 /**
- * Fallback booking link. The search response contains no direct booking URL;
- * this pattern (accommodation id only, no campsite slug) was confirmed to
- * resolve in manual testing. Re-verify if camping.care changes their router.
+ * The search response contains no direct booking URL, and the real one
+ * requires the campsite's booking slug (no placeholder works — confirmed by
+ * hitting the actual booking flow; see src/config/campsites.json). Returns
+ * null when the campsite's slug isn't known yet rather than emitting a link
+ * that 404s.
  */
-export function buildBookingUrl(accommodationId: number): string {
-  return `https://booking.camping.care/_/accommodations/${accommodationId}?accommodation=${accommodationId}`;
+export function buildBookingUrl(accommodationId: number, slug: string | null): string | null {
+  if (!slug) return null;
+  return `https://booking.camping.care/${slug}/accommodations/${accommodationId}?accommodation=${accommodationId}`;
 }
 
 export interface RawAccommodation {
@@ -193,9 +208,11 @@ export function toCampMatch(
   const adminId = extractAdminId(raw.thumbnail);
   const price = typeof raw.price_total === 'number' ? raw.price_total : raw.price;
   if (typeof raw.numeric_id !== 'number' || adminId === null) return null;
+  const campsite = CAMPSITES[adminId];
   return {
     scrapedAt,
     adminId,
+    locationName: campsite?.name ?? `Admin ${adminId}`,
     accommodationId: raw.numeric_id,
     name: raw.name ?? `Accommodation ${raw.numeric_id}`,
     category: raw.category ?? 'unknown',
@@ -205,6 +222,6 @@ export function toCampMatch(
     durationNights: window.durationNights,
     priceTotal: typeof price === 'number' ? price : 0,
     currency: 'CHF',
-    bookingUrl: buildBookingUrl(raw.numeric_id),
+    bookingUrl: buildBookingUrl(raw.numeric_id, campsite?.slug ?? null),
   };
 }

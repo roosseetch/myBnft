@@ -10,6 +10,7 @@
   "scripts": {
     "scrape": "tsx src/scrape.ts",
     "debug-search": "tsx src/debugSearch.ts",
+    "update-campsites": "tsx src/updateCampsites.ts",
     "rotate-key": "tsx src/rotateKey.ts",
     "init-key": "tsx src/initKey.ts",
     "test": "vitest run",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "eslint": "^9.17.0",
+    "playwright": "^1.61.1",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
