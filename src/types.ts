@@ -26,6 +26,8 @@ export interface CampMatch {
   adminId: string;
   /** Campsite display name, e.g. "TCS Camping Salavaux Plage" — falls back to `Admin ${adminId}` when the campsite isn't in campsites.json yet. */
   locationName: string;
+  /** Link to the campsite's page on the TCS marketing site; null when the campsite isn't in campsites.json yet. */
+  locationUrl: string | null;
   accommodationId: number;
   name: string; // e.g. "Family Pod"
   category: string;

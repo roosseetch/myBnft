@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   REQUEST_LIMIT,
   buildBookingUrl,
+  buildLocationUrl,
   extractAdminId,
   lumpedAgeCategories,
   searchWindow,
@@ -117,6 +118,18 @@ describe('buildBookingUrl', () => {
   });
 });
 
+describe('buildLocationUrl', () => {
+  it('builds the TCS marketing site link when the campsite slug is known', () => {
+    expect(buildLocationUrl('tcs-camping-thusis-viamala')).toBe(
+      'https://camping.tcs.ch/de/campingplaetze/tcs-camping-thusis-viamala/',
+    );
+  });
+
+  it('returns null when the slug is unknown', () => {
+    expect(buildLocationUrl(null)).toBeNull();
+  });
+});
+
 describe('extractAdminId', () => {
   it('pulls the id out of a thumbnail URL', () => {
     expect(extractAdminId('https://cdn.camping.care/administration/12345/photos/1.jpg')).toBe(
@@ -149,6 +162,7 @@ describe('toCampMatch', () => {
     expect(match).toMatchObject({
       adminId: '55',
       locationName: 'Admin 55',
+      locationUrl: null,
       accommodationId: 991,
       name: 'Family Pod',
       category: 'pod',

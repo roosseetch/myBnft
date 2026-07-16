@@ -8,6 +8,7 @@ function match(overrides: Partial<CampMatch>): CampMatch {
     scrapedAt: '2026-07-14T06:00:00.000Z',
     adminId: '1',
     locationName: 'Test Campsite',
+    locationUrl: 'https://camping.tcs.ch/de/campingplaetze/test-campsite/',
     accommodationId: 100,
     name: 'Pod',
     category: 'pod',

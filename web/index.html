@@ -252,16 +252,19 @@
         margin-left: 3px;
       }
       a.book,
+      a.location-link,
       span.book-unavailable {
         font-size: 13px;
         font-weight: 600;
         text-decoration: none;
       }
-      a.book {
+      a.book,
+      a.location-link {
         color: var(--pine);
         border-bottom: 1.5px solid var(--pine);
       }
-      a.book:hover {
+      a.book:hover,
+      a.location-link:hover {
         color: var(--pine-deep);
         border-color: var(--pine-deep);
       }
@@ -388,7 +391,18 @@
               const row = document.createElement('tr');
 
               const location = document.createElement('td');
-              location.textContent = m.locationName ?? `Admin ${m.adminId}`;
+              const locationText = m.locationName ?? `Admin ${m.adminId}`;
+              if (m.locationUrl) {
+                const locLink = document.createElement('a');
+                locLink.className = 'location-link';
+                locLink.href = m.locationUrl;
+                locLink.target = '_blank';
+                locLink.rel = 'noopener noreferrer';
+                locLink.textContent = locationText;
+                location.append(locLink);
+              } else {
+                location.textContent = locationText;
+              }
 
               const nameCell = document.createElement('td');
               nameCell.className = 'name-cell';

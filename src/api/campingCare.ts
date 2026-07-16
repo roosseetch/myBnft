@@ -98,6 +98,16 @@ export function buildBookingUrl(accommodationId: number, slug: string | null): s
   return `https://booking.camping.care/${slug}/accommodations/${accommodationId}?accommodation=${accommodationId}`;
 }
 
+/**
+ * The campsite's page on the TCS marketing site. campsites.json's slug came
+ * from this exact site's sitemap (see src/updateCampsites.ts), so the same
+ * string works here unchanged.
+ */
+export function buildLocationUrl(slug: string | null): string | null {
+  if (!slug) return null;
+  return `https://camping.tcs.ch/de/campingplaetze/${slug}/`;
+}
+
 export interface RawAccommodation {
   /** Opaque string id (e.g. "acc_..."); NOT the numeric accommodation id — see numeric_id. */
   id: string;
@@ -213,6 +223,7 @@ export function toCampMatch(
     scrapedAt,
     adminId,
     locationName: campsite?.name ?? `Admin ${adminId}`,
+    locationUrl: buildLocationUrl(campsite?.slug ?? null),
     accommodationId: raw.numeric_id,
     name: raw.name ?? `Accommodation ${raw.numeric_id}`,
     category: raw.category ?? 'unknown',
