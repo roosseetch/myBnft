@@ -1,0 +1,283 @@
+/* Same-origin file served alongside index.html — not a third-party CDN.
+   No external stylesheets/fonts/analytics: nothing that could observe the
+   pasted key via a network request to another origin. */
+:root {
+  --paper: #fbfaf6;
+  --ink: #23291f;
+  --ink-soft: #5c6355;
+  --pine: #2e5339;
+  --pine-deep: #1f3a28;
+  --line: #e3e1d7;
+  --card: #ffffff;
+  --accent-warm: #b0682f;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    16px/1.55 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+/* The dashboard's table needs more room than the newsletter landing;
+   #locked keeps its own narrower max-width independent of this. */
+main.wide {
+  max-width: 1600px;
+}
+
+/* ---------- Locked state: an unremarkable newsletter landing ---------- */
+#locked {
+  max-width: 460px;
+  margin: 18vh auto 0;
+  text-align: left;
+}
+#locked .mark {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pine);
+  font-weight: 700;
+}
+#locked h1 {
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-size: clamp(28px, 5vw, 38px);
+  line-height: 1.15;
+  margin: 10px 0 8px;
+  font-weight: 600;
+}
+#locked p {
+  color: var(--ink-soft);
+  margin: 0 0 26px;
+}
+.signup {
+  display: flex;
+  gap: 8px;
+}
+.signup input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  font-size: 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+}
+.signup input:focus {
+  outline: 2px solid var(--pine);
+  outline-offset: 1px;
+  border-color: var(--pine);
+}
+.signup button {
+  padding: 11px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--pine);
+  color: #fff;
+}
+.signup button:hover {
+  background: var(--pine-deep);
+}
+.signup button:focus-visible {
+  outline: 2px solid var(--pine-deep);
+  outline-offset: 2px;
+}
+#locked .fine {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 12px;
+}
+/* Deliberately generic: same wording for wrong key, missing data, or any error. */
+#notice {
+  font-size: 14px;
+  color: var(--accent-warm);
+  margin-top: 14px;
+  min-height: 1.4em;
+}
+
+/* ---------- Unlocked state: the actual dashboard ---------- */
+#dash {
+  display: none;
+}
+#dash.open {
+  display: block;
+  animation: rise 0.35s ease-out;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #dash.open {
+    animation: none;
+  }
+}
+
+header.dash-head {
+  padding: 42px 0 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 16px;
+}
+header.dash-head h1 {
+  font-family: ui-serif, Georgia, serif;
+  font-size: 26px;
+  margin: 0;
+  font-weight: 600;
+}
+header.dash-head .meta {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 22px;
+}
+.controls .label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  align-self: center;
+  margin-right: 2px;
+}
+.controls button {
+  font-size: 13.5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+.controls button[aria-pressed='true'] {
+  background: var(--pine);
+  border-color: var(--pine);
+  color: #fff;
+}
+.controls button:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+th,
+td {
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+th {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: #f3f2ec;
+  position: sticky;
+  top: 0;
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
+tbody tr:hover {
+  background: #f7f6f1;
+}
+td.name-cell {
+  white-space: normal;
+  min-width: 160px;
+}
+td.book-cell {
+  white-space: normal;
+  min-width: 660px;
+  max-width: 840px;
+  word-break: break-all;
+}
+td.name-cell .name {
+  font-weight: 600;
+}
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #e9efe7;
+  color: var(--pine-deep);
+}
+td.price-cell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+td.price-cell small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-left: 3px;
+}
+a.book,
+a.location-link,
+span.book-unavailable {
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+a.book,
+a.location-link {
+  color: var(--pine);
+  border-bottom: 1.5px solid var(--pine);
+}
+a.book:hover,
+a.location-link:hover {
+  color: var(--pine-deep);
+  border-color: var(--pine-deep);
+}
+span.book-unavailable {
+  color: var(--ink-soft);
+  font-weight: 400;
+  font-style: italic;
+}
+.empty {
+  color: var(--ink-soft);
+  padding: 30px 0;
+}

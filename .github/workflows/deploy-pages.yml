@@ -38,6 +38,8 @@ jobs:
         run: |
           mkdir -p _site/data
           cp web/index.html _site/index.html
+          cp web/style.css _site/style.css
+          cp web/app.js _site/app.js
           cp data/encrypted-history.json _site/data/encrypted-history.json
 
       - uses: actions/upload-pages-artifact@v5

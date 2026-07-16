@@ -6,7 +6,7 @@ myCamp automatically searches TCS Camping (Switzerland) every day for available 
 
 - **Daily** (`daily-scrape.yml`, 06:00 UTC): queries `api.camping.care/v3/accommodations/search` for every candidate `(arrival, duration)` window, filters by category denylist and family capacity, merges new matches into the history, re-encrypts it with the current key and commits `data/encrypted-history.json`.
 - **Weekly** (`weekly-rotate.yml`, Monday 03:00 UTC): runs the same scrape, then generates a fresh 256-bit AES key, updates the repo variable via the GitHub API, and re-encrypts the full history with the new key.
-- **Dashboard** (`web/index.html`, deployed by `deploy-pages.yml`): a single self-contained page. Paste the current key into the input field (disguised as a newsletter email field) to decrypt and browse results.
+- **Dashboard** (`web/index.html` + `web/style.css` + `web/app.js`, deployed by `deploy-pages.yml`): same-origin static files, no CDNs/external scripts. Paste the current key into the input field (disguised as a newsletter email field) to decrypt and browse results.
 
 ## One-time setup
 
