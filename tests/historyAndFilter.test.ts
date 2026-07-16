@@ -27,6 +27,7 @@ describe('filterMatches', () => {
     adults: 2,
     children: [5, 2],
     excludedCategories: ['campsite', 'caravan', 'other'],
+    excludedNames: ['cereb'],
   };
 
   it('drops denylisted categories but keeps unknown/new ones', () => {
@@ -49,6 +50,18 @@ describe('filterMatches', () => {
     const kept = filterMatches([match({ personsMax: 3 }), match({ personsMax: 4 })], conditions);
     expect(kept).toHaveLength(1);
     expect(kept[0]?.personsMax).toBe(4);
+  });
+
+  it('drops names matching an excluded substring, case-insensitively, but keeps unrelated names', () => {
+    const kept = filterMatches(
+      [
+        match({ name: 'Bungalow Cerebral' }),
+        match({ name: 'BUNGALOW CEREBRAL DELUXE' }),
+        match({ name: 'Bungalow' }),
+      ],
+      conditions,
+    );
+    expect(kept.map((m) => m.name)).toEqual(['Bungalow']);
   });
 });
 

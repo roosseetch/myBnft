@@ -13,16 +13,30 @@ export function isExcludedCategory(category: string, excludedCategories: string[
 }
 
 /**
- * Keep matches that (a) are not in an excluded category and (b) can sleep the
- * whole family — capacity derived from the effective conditions at query time.
+ * Some accommodation *names* (not categories) are unsuitable regardless of
+ * category/capacity — e.g. "Bungalow Cerebral" is designated for families
+ * affected by cerebral palsy, not a general booking. Denylist by
+ * case-insensitive SUBSTRING (not exact match), since a campsite may name
+ * variants like "Bungalow Cerebral Deluxe" that should also be caught.
+ */
+export function isExcludedName(name: string, excludedNameSubstrings: string[]): boolean {
+  return excludedNameSubstrings.some((n) => name.toLowerCase().includes(n.toLowerCase()));
+}
+
+/**
+ * Keep matches that (a) are not in an excluded category, (b) are not an
+ * excluded specific accommodation name, and (c) can sleep the whole family —
+ * capacity derived from the effective conditions at query time.
  */
 export function filterMatches(
   matches: CampMatch[],
-  conditions: Pick<Conditions, 'adults' | 'children' | 'excludedCategories'>,
+  conditions: Pick<Conditions, 'adults' | 'children' | 'excludedCategories' | 'excludedNames'>,
 ): CampMatch[] {
   const minCapacity = minAccommodationCapacity(conditions);
   return matches.filter(
     (m) =>
-      !isExcludedCategory(m.category, conditions.excludedCategories) && m.personsMax >= minCapacity,
+      !isExcludedCategory(m.category, conditions.excludedCategories) &&
+      !isExcludedName(m.name, conditions.excludedNames) &&
+      m.personsMax >= minCapacity,
   );
 }

@@ -16,6 +16,8 @@ export interface Conditions {
    * by default (see §4.2 quirk 3 of the spec).
    */
   excludedCategories: string[];
+  /** Denylist of accommodation-name substrings (case-insensitive) that are unsuitable regardless of category/capacity, e.g. "cereb" to catch "Bungalow Cerebral". */
+  excludedNames: string[];
 }
 
 /** One matching accommodation/stay combination. */

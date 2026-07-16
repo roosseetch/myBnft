@@ -10,6 +10,7 @@ const base: Conditions = {
   stayDurations: [7],
   arrivalWeekdays: [1],
   excludedCategories: ['campsite', 'caravan', 'other'],
+  excludedNames: ['cereb'],
 };
 
 describe('mergeConditions', () => {
