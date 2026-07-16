@@ -59,7 +59,7 @@ export async function runScrape(history: HistoryFile): Promise<HistoryFile> {
     );
   }
 
-  return mergeMatches(history, filtered);
+  return mergeMatches(history, filtered, windows);
 }
 
 async function main(): Promise<void> {

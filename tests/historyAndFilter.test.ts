@@ -58,9 +58,11 @@ describe('mergeMatches', () => {
       ...emptyHistory(),
       matches: [match({ priceTotal: 200, scrapedAt: '2026-07-13T06:00:00.000Z' })],
     };
-    const merged = mergeMatches(history, [
-      match({ priceTotal: 185, scrapedAt: '2026-07-14T06:00:00.000Z' }),
-    ]);
+    const merged = mergeMatches(
+      history,
+      [match({ priceTotal: 185, scrapedAt: '2026-07-14T06:00:00.000Z' })],
+      [{ arrival: '2026-07-16', durationNights: 2 }],
+    );
     expect(merged.matches).toHaveLength(1);
     expect(merged.matches[0]?.priceTotal).toBe(185);
     expect(merged.matches[0]?.scrapedAt).toBe('2026-07-14T06:00:00.000Z');
@@ -68,15 +70,45 @@ describe('mergeMatches', () => {
 
   it('treats a different arrival or duration as a distinct match', () => {
     const history = { ...emptyHistory(), matches: [match({})] };
-    const merged = mergeMatches(history, [
-      match({ arrival: '2026-07-17' }),
-      match({ durationNights: 3 }),
-    ]);
+    const merged = mergeMatches(
+      history,
+      [match({ arrival: '2026-07-17' }), match({ durationNights: 3 })],
+      [
+        { arrival: '2026-07-17', durationNights: 2 },
+        { arrival: '2026-07-16', durationNights: 3 },
+      ],
+    );
     expect(merged.matches).toHaveLength(3);
   });
 
   it('preserves keyVersion', () => {
-    const merged = mergeMatches({ keyVersion: 5, matches: [] }, [match({})]);
+    const merged = mergeMatches({ keyVersion: 5, matches: [] }, [match({})], [
+      { arrival: '2026-07-16', durationNights: 2 },
+    ]);
     expect(merged.keyVersion).toBe(5);
+  });
+
+  it('drops a match whose window was actively searched but no longer comes back (sold out/removed)', () => {
+    const history = {
+      ...emptyHistory(),
+      matches: [
+        match({ accommodationId: 100 }),
+        match({ accommodationId: 200 }),
+      ],
+    };
+    const merged = mergeMatches(
+      history,
+      [match({ accommodationId: 100 })], // only 100 still shows up
+      [{ arrival: '2026-07-16', durationNights: 2 }], // this window WAS searched
+    );
+    expect(merged.matches.map((m) => m.accommodationId)).toEqual([100]);
+  });
+
+  it('leaves a match untouched when its window falls outside what was searched this run', () => {
+    const history = { ...emptyHistory(), matches: [match({})] };
+    // Nothing fresh, and this run didn't search that window at all — e.g. the
+    // configured search window has since narrowed. The old entry must survive.
+    const merged = mergeMatches(history, [], []);
+    expect(merged.matches).toHaveLength(1);
   });
 });

@@ -53,14 +53,35 @@ export function dedupeKey(
   return `${m.adminId}|${m.accommodationId}|${m.arrival}|${m.durationNights}`;
 }
 
+function windowKey(m: Pick<CampMatch, 'arrival' | 'durationNights'>): string {
+  return `${m.arrival}|${m.durationNights}`;
+}
+
 /**
  * Merge freshly-scraped matches into the history. Dedupe on
  * adminId+accommodationId+arrival+durationNights; on conflict keep the most
  * recent priceTotal/scrapedAt (i.e. the new match wins those fields).
+ *
+ * `searchedWindows` is the full set of (arrival, duration) windows this run
+ * queried (i.e. `generateDateWindows(conditions)`), not just the ones with
+ * results. An existing match whose window was actively searched this run but
+ * didn't come back in `fresh` is dropped — it's confirmed gone (sold out,
+ * removed), not merely unchecked. A match whose window falls outside what
+ * was searched this run (e.g. the search window has since narrowed) is left
+ * untouched, since we have no fresh information about it either way.
  */
-export function mergeMatches(history: HistoryFile, fresh: CampMatch[]): HistoryFile {
+export function mergeMatches(
+  history: HistoryFile,
+  fresh: CampMatch[],
+  searchedWindows: Pick<CampMatch, 'arrival' | 'durationNights'>[],
+): HistoryFile {
+  const searchedKeys = new Set(searchedWindows.map(windowKey));
   const byKey = new Map<string, CampMatch>();
-  for (const m of history.matches) byKey.set(dedupeKey(m), m);
+
+  for (const m of history.matches) {
+    if (searchedKeys.has(windowKey(m))) continue; // only survives below if still present in `fresh`
+    byKey.set(dedupeKey(m), m);
+  }
   for (const m of fresh) {
     const key = dedupeKey(m);
     const existing = byKey.get(key);
