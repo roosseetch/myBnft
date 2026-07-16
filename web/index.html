@@ -426,7 +426,7 @@
                 link.href = m.bookingUrl;
                 link.target = '_blank';
                 link.rel = 'noopener noreferrer';
-                link.textContent = 'Check \u2197';
+                link.textContent = new URL(m.bookingUrl).pathname;
                 bookCell.append(link);
               } else {
                 const span = document.createElement('span');
