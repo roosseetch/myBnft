@@ -43,6 +43,11 @@
         margin: 0 auto;
         padding: 0 20px 80px;
       }
+      /* The dashboard's table needs more room than the newsletter landing;
+         #locked keeps its own narrower max-width independent of this. */
+      main.wide {
+        max-width: 1600px;
+      }
 
       /* ---------- Locked state: an unremarkable newsletter landing ---------- */
       #locked {
@@ -485,6 +490,7 @@
             const history = JSON.parse(await decrypt(blob, key));
             matches = Array.isArray(history.matches) ? history.matches : [];
             $('locked').hidden = true;
+            document.querySelector('main').classList.add('wide');
             const dash = $('dash');
             dash.classList.add('open');
             dash.setAttribute('aria-hidden', 'false');
