@@ -1,29 +1,33 @@
 /**
- * Candidate booking.camping.care slugs to probe when (re)building
- * src/config/campsites.json (see src/updateCampsites.ts).
+ * Fallback candidate booking.camping.care slugs, used only if
+ * discoverSlugsFromMarketingSite() (see src/updateCampsites.ts) fails to
+ * reach camping.tcs.ch's search page. That dynamic discovery is authoritative
+ * — it reads campingCareSlug directly from camping.tcs.ch's own campsite
+ * data — so this list exists purely as a safety net and doesn't need to be
+ * kept in sync by hand.
  *
- * Seeded from https://camping.tcs.ch/sitemap-0.xml's /de/campingplaetze/{slug}/
- * entries. That marketing-site slug is NOT always the same as the booking
- * widget's slug — some of these resolve to booking.camping.care/not-found and
- * are silently skipped by the discovery script. If you know the correct
- * booking slug for one of those, add/replace it here by hand.
+ * These are the verified-correct slugs (confirmed via the dynamic discovery
+ * itself). Two are NOT simple transliterations of the campsite name —
+ * "tcs-camping-bern-eymatt" and "tcs-camping-lugano-muzzano" (no suffix)
+ * resolve to internal test duplicates, not the real campsite, so don't add
+ * those back without the "1" suffix.
  */
 export const CAMPSITE_SLUG_CANDIDATES: string[] = [
   'riverlodge',
-  'tcs-camping-bern-eymatt',
-  'tcs-camping-boenigen-brienzersee',
-  'tcs-camping-buochs-vierwaldstaettersee',
+  'tcs-camping-laax-pop-glamping',
+  'tcs-camping-bern-eymatt1',
+  'tcs-camping-bonigen-brienzersee',
+  'tcs-camping-buochs-vierwaldstattersee',
   'tcs-camping-disentis',
-  'tcs-camping-estavayer-la-nouvelle-plage',
+  'tcs-camping-estavayer-le-lac',
   'tcs-camping-flaach-am-rhein',
   'tcs-camping-flims',
-  'tcs-camping-geneve-vesenaz',
-  'tcs-camping-gordevio-valle-maggia',
+  'tcs-camping-genf-vesenaz',
+  'tcs-camping-gordevio-maggiatal',
   'tcs-camping-gwatt-thunersee',
   'tcs-camping-interlaken',
-  'tcs-camping-laax-pop-glamping',
-  'tcs-camping-la-tene-lac-de-neuchatel',
-  'tcs-camping-lugano-muzzano',
+  'tcs-camping-la-tene-neuenburgersee',
+  'tcs-camping-lugano-muzzano1',
   'tcs-camping-luzern-horw',
   'tcs-camping-martigny',
   'tcs-camping-morges',

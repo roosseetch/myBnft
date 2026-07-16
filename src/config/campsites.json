@@ -1,11 +1,15 @@
 {
-  "2306": {
-    "slug": "tcs-camping-bern-eymatt",
-    "name": "TCS Camping Bern Eymatt (Test)"
+  "2563": {
+    "slug": "tcs-camping-bern-eymatt1",
+    "name": "TCS Camping Bern Eymatt"
   },
-  "2307": {
-    "slug": "tcs-camping-lugano-muzzano",
-    "name": "TCS TEST Camping (Test)"
+  "2565": {
+    "slug": "tcs-camping-buochs-vierwaldstattersee",
+    "name": "TCS Camping Buochs Vierwaldstättersee"
+  },
+  "2566": {
+    "slug": "tcs-camping-bonigen-brienzersee",
+    "name": "TCS Camping Bönigen Brienzersee"
   },
   "2567": {
     "slug": "tcs-camping-disentis",
@@ -19,6 +23,14 @@
     "slug": "tcs-camping-flims",
     "name": "TCS Camping Flims"
   },
+  "2571": {
+    "slug": "tcs-camping-genf-vesenaz",
+    "name": "TCS Camping Genève Vésenaz"
+  },
+  "2572": {
+    "slug": "tcs-camping-gordevio-maggiatal",
+    "name": "TCS Camping Gordevio Valle Maggia"
+  },
   "2573": {
     "slug": "tcs-camping-gwatt-thunersee",
     "name": "TCS Camping Gwatt Thunersee"
@@ -26,6 +38,10 @@
   "2574": {
     "slug": "tcs-camping-interlaken",
     "name": "TCS Camping Interlaken"
+  },
+  "2575": {
+    "slug": "tcs-camping-lugano-muzzano1",
+    "name": "TCS Camping Lugano-Muzzano"
   },
   "2576": {
     "slug": "tcs-camping-luzern-horw",
@@ -70,6 +86,14 @@
   "2586": {
     "slug": "tcs-camping-thusis-viamala",
     "name": "TCS Camping Thusis Viamala"
+  },
+  "2864": {
+    "slug": "tcs-camping-la-tene-neuenburgersee",
+    "name": "TCS Camping La Tène Lac de Neuchâtel"
+  },
+  "3664": {
+    "slug": "tcs-camping-estavayer-le-lac",
+    "name": "TCS Camping Estavayer La Nouvelle Plage"
   },
   "3666": {
     "slug": "tcs-camping-olivone",

@@ -20,9 +20,18 @@ import type { CampsiteInfo } from './types.js';
  * candidate slug list and reads both off the rendered page.
  *
  * A candidate slug that doesn't correspond to a real campsite lands on
- * booking.camping.care/not-found and is skipped — the marketing site's own
- * slugs (where these candidates come from) don't always match the booking
- * widget's slugs. Entries from a previous run are preserved unless this run
+ * booking.camping.care/not-found and is skipped. Candidates come from two
+ * places: (1) camping.tcs.ch's own search page (camping.tcs.ch/de/campingplatz-suche/)
+ * embeds a Gatsby static-query result (fetched as one of several
+ * /page-data/sq/d/{hash}.json files — the hash isn't stable across builds,
+ * so it's found at runtime, not hardcoded) containing `data.allCampsites`,
+ * each with a `campingCareSlug` field. This is the authoritative source:
+ * the marketing site's own page *path* slug is sometimes subtly different
+ * from campingCareSlug (umlaut transliteration, entirely different wording,
+ * or a disambiguating suffix like "1" because the "bare" slug hits an
+ * internal test duplicate) — see git history for concrete examples. (2) a
+ * static fallback list (campsiteSlugCandidates.ts) in case that discovery
+ * ever fails. Entries from a previous run are preserved unless this run
  * successfully resolves a *different* slug for the same admin id, so a
  * transient failure on one candidate doesn't drop already-known-good data.
  *
@@ -75,15 +84,67 @@ async function resolveSlug(
   return { adminId: result.adminId, name: result.title };
 }
 
+/**
+ * camping.tcs.ch's search page loads its full campsite list as a Gatsby
+ * static-query result — one of several /page-data/sq/d/{hash}.json requests
+ * it makes on load. The hash is content-derived and changes across builds,
+ * so we can't hardcode the URL; instead capture every such response while
+ * the page loads and keep whichever one has `data.allCampsites`.
+ */
+async function discoverSlugsFromMarketingSite(
+  browser: import('playwright').Browser,
+): Promise<string[]> {
+  const page = await browser.newPage();
+  const sqBodies: unknown[] = [];
+  page.on('response', (res) => {
+    if (/\/page-data\/sq\/d\/\d+\.json$/.test(new URL(res.url()).pathname)) {
+      sqBodies.push(
+        res
+          .json()
+          .catch(() => null),
+      );
+    }
+  });
+
+  await page.goto('https://camping.tcs.ch/de/campingplatz-suche/', {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.waitForTimeout(5_000); // let the static-query chunks finish loading
+  const bodies = await Promise.all(sqBodies);
+  await page.close();
+
+  const slugs = new Set<string>();
+  for (const body of bodies) {
+    const campsites = (body as { data?: { allCampsites?: unknown[] } } | null)?.data
+      ?.allCampsites;
+    if (!Array.isArray(campsites)) continue;
+    for (const c of campsites) {
+      const slug = (c as { campingCareSlug?: unknown })?.campingCareSlug;
+      if (typeof slug === 'string') slugs.add(slug);
+    }
+  }
+  return [...slugs];
+}
+
 async function main(): Promise<void> {
   const table = loadExisting();
   const browser = await chromium.launch();
-  const page = await browser.newPage();
 
+  const discovered = await discoverSlugsFromMarketingSite(browser).catch((err) => {
+    console.warn(
+      `[myCamp] Couldn't auto-discover slugs from camping.tcs.ch (falling back to the static ` +
+        `candidate list only): ${(err as Error).message}`,
+    );
+    return [] as string[];
+  });
+  console.log(`[myCamp] discovered ${discovered.length} slug(s) from camping.tcs.ch.`);
+  const candidateSlugs = [...new Set([...discovered, ...CAMPSITE_SLUG_CANDIDATES])];
+
+  const page = await browser.newPage();
   let resolved = 0;
   let skipped = 0;
 
-  for (const slug of CAMPSITE_SLUG_CANDIDATES) {
+  for (const slug of candidateSlugs) {
     try {
       const result = await resolveSlug(page, slug);
       if (!result) {
