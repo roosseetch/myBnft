@@ -227,6 +227,11 @@
         white-space: normal;
         min-width: 160px;
       }
+      td.book-cell {
+        white-space: normal;
+        min-width: 260px;
+        word-break: break-all;
+      }
       td.name-cell .name {
         font-weight: 600;
       }
@@ -381,11 +386,15 @@
 
         function render() {
           const grid = $('grid');
-          const sorted = [...matches].sort((a, b) =>
-            sortMode === 'price'
+          // Unresolved locations ("Admin N…") surface first, regardless of sort
+          // mode, so the ones needing a campsites.json entry are easy to spot.
+          const sorted = [...matches].sort((a, b) => {
+            const unresolvedDiff = (a.locationUrl ? 1 : 0) - (b.locationUrl ? 1 : 0);
+            if (unresolvedDiff !== 0) return unresolvedDiff;
+            return sortMode === 'price'
               ? a.priceTotal - b.priceTotal || a.arrival.localeCompare(b.arrival)
-              : a.arrival.localeCompare(b.arrival) || a.priceTotal - b.priceTotal,
-          );
+              : a.arrival.localeCompare(b.arrival) || a.priceTotal - b.priceTotal;
+          });
           grid.replaceChildren(
             ...sorted.map((m) => {
               const row = document.createElement('tr');
@@ -434,6 +443,7 @@
               price.append(cur);
 
               const bookCell = document.createElement('td');
+              bookCell.className = 'book-cell';
               if (m.bookingUrl) {
                 const link = document.createElement('a');
                 link.className = 'book';
