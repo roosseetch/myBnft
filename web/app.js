@@ -40,6 +40,17 @@
     return `${d}.${m}.${y}`;
   };
 
+  const SORTERS = {
+    price: (a, b) => a.priceTotal - b.priceTotal || a.arrival.localeCompare(b.arrival),
+    location: (a, b) =>
+      (a.locationName ?? `Admin ${a.adminId}`).localeCompare(b.locationName ?? `Admin ${b.adminId}`) ||
+      a.priceTotal - b.priceTotal,
+    sleeps: (a, b) => a.personsMax - b.personsMax || a.priceTotal - b.priceTotal,
+    arrival: (a, b) => a.arrival.localeCompare(b.arrival) || a.priceTotal - b.priceTotal,
+    departure: (a, b) => a.departure.localeCompare(b.departure) || a.priceTotal - b.priceTotal,
+    nights: (a, b) => a.durationNights - b.durationNights || a.priceTotal - b.priceTotal,
+  };
+
   function render() {
     const grid = $('grid');
     // Unresolved locations ("Admin N…") surface first, regardless of sort
@@ -47,9 +58,7 @@
     const sorted = [...matches].sort((a, b) => {
       const unresolvedDiff = (a.locationUrl ? 1 : 0) - (b.locationUrl ? 1 : 0);
       if (unresolvedDiff !== 0) return unresolvedDiff;
-      return sortMode === 'price'
-        ? a.priceTotal - b.priceTotal || a.arrival.localeCompare(b.arrival)
-        : a.arrival.localeCompare(b.arrival) || a.priceTotal - b.priceTotal;
+      return SORTERS[sortMode](a, b);
     });
     grid.replaceChildren(
       ...sorted.map((m) => {
