@@ -1,16 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { CampMatch, CampsiteInfo, Conditions, DateWindow } from '../types.js';
-
-/** admin id -> { slug, name }, built by `npm run update-campsites` (see src/updateCampsites.ts). */
-function loadCampsites(): Record<string, CampsiteInfo> {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const file = path.resolve(here, '../config/campsites.json');
-  return JSON.parse(readFileSync(file, 'utf8')) as Record<string, CampsiteInfo>;
-}
-
-const CAMPSITES = loadCampsites();
 
 /**
  * Publishable/public API token for the TCS Camping instance of camping.care.
@@ -99,9 +90,9 @@ export function buildBookingUrl(accommodationId: number, slug: string | null): s
 }
 
 /**
- * The campsite's page on the TCS marketing site. campsites.json's slug came
- * from this exact site's sitemap (see src/updateCampsites.ts), so the same
- * string works here unchanged.
+ * The campsite's page on the TCS marketing site. The slug from
+ * v21/administrations/{id} (see resolveCampsite() below) matches this path
+ * directly — confirmed by cross-checking known campsites.
  */
 export function buildLocationUrl(slug: string | null): string | null {
   if (!slug) return null;
@@ -209,16 +200,85 @@ export async function searchWindow(
   return { accommodations: result.items, usedLumpedFallback, possiblyTruncated };
 }
 
+/**
+ * admin id -> resolved campsite info, or null for an admin id that was looked
+ * up and found unresolvable (inactive, or the API call failed) this run.
+ * Load with loadCampsiteDirectory(), persist with saveCampsiteDirectory() —
+ * negative (null) entries are never written to disk, so a previously-failed
+ * admin id is retried on the next run rather than staying stuck forever.
+ */
+export type CampsiteDirectory = Record<string, CampsiteInfo | null>;
+
+function campsitesFilePath(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(here, '../config/campsites.json');
+}
+
+export function loadCampsiteDirectory(): CampsiteDirectory {
+  const file = campsitesFilePath();
+  if (!existsSync(file)) return {};
+  return JSON.parse(readFileSync(file, 'utf8')) as CampsiteDirectory;
+}
+
+export function saveCampsiteDirectory(directory: CampsiteDirectory): void {
+  const sorted = Object.fromEntries(
+    Object.entries(directory)
+      .filter((entry): entry is [string, CampsiteInfo] => entry[1] != null)
+      .sort(([a], [b]) => Number(a) - Number(b)),
+  );
+  writeFileSync(campsitesFilePath(), JSON.stringify(sorted, null, 2) + '\n');
+}
+
+/**
+ * Resolves a campsite's real name/booking-slug straight from camping.care's
+ * own API — no scraping or guessing needed. v21/administrations/{numericId}
+ * works with the public multi-network token (unlike the slug-keyed or
+ * accommodation-keyed v21 endpoints, which return "No valid API key found
+ * for this administration" — those need a per-administration key we don't
+ * have). Only administrations with status "active" are accepted, so a
+ * closed/inactive campsite id isn't treated as resolved.
+ */
+export async function resolveCampsite(
+  adminId: string,
+  directory: CampsiteDirectory,
+  fetchImpl: FetchLike = fetch,
+): Promise<CampsiteInfo | null> {
+  if (adminId in directory) return directory[adminId] ?? null;
+
+  try {
+    const res = await fetchImpl(`https://api.camping.care/v21/administrations/${adminId}`, {
+      headers: { Authorization: `Bearer ${TCS_PUBLIC_API_TOKEN}`, Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      directory[adminId] = null;
+      return null;
+    }
+    const body = (await res.json()) as { name?: unknown; slug?: unknown; status?: unknown };
+    if (body.status !== 'active' || typeof body.name !== 'string' || typeof body.slug !== 'string') {
+      directory[adminId] = null;
+      return null;
+    }
+    const info: CampsiteInfo = { slug: body.slug, name: body.name };
+    directory[adminId] = info;
+    return info;
+  } catch {
+    directory[adminId] = null;
+    return null;
+  }
+}
+
 /** Convert one raw accommodation into a CampMatch (returns null if essentials are missing). */
-export function toCampMatch(
+export async function toCampMatch(
   raw: RawAccommodation,
   window: DateWindow,
   scrapedAt: string,
-): CampMatch | null {
+  directory: CampsiteDirectory,
+  fetchImpl: FetchLike = fetch,
+): Promise<CampMatch | null> {
   const adminId = extractAdminId(raw.thumbnail);
   const price = typeof raw.price_total === 'number' ? raw.price_total : raw.price;
   if (typeof raw.numeric_id !== 'number' || adminId === null) return null;
-  const campsite = CAMPSITES[adminId];
+  const campsite = await resolveCampsite(adminId, directory, fetchImpl);
   return {
     scrapedAt,
     adminId,

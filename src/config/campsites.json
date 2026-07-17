@@ -23,6 +23,10 @@
     "slug": "tcs-camping-flims",
     "name": "TCS Camping Flims"
   },
+  "2570": {
+    "slug": "tcs-camping-gampelen-neuenburgersee",
+    "name": "TCS Camping Gampelen Neuenburgersee"
+  },
   "2571": {
     "slug": "tcs-camping-genf-vesenaz",
     "name": "TCS Camping Genève Vésenaz"
@@ -98,5 +102,13 @@
   "3666": {
     "slug": "tcs-camping-olivone",
     "name": "TCS Camping Olivone"
+  },
+  "5367": {
+    "slug": "tcs-winter-camping-buochs-vierwaldstattersee",
+    "name": "TCS Winter Camping Buochs Vierwaldstättersee"
+  },
+  "5368": {
+    "slug": "tcs-winter-camping-olivone",
+    "name": "TCS Winter Camping Olivone"
   }
 }

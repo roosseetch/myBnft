@@ -1,14 +1,21 @@
 import { loadConditions } from './config/conditions.js';
 import { generateDateWindows } from './search/dateWindows.js';
 import { filterMatches } from './search/filterAccommodations.js';
-import { searchWindow, toCampMatch } from './api/campingCare.js';
+import {
+  searchWindow,
+  toCampMatch,
+  loadCampsiteDirectory,
+  saveCampsiteDirectory,
+} from './api/campingCare.js';
 
 /**
  * Manual, one-off query against the live camping.care API — no encryption key,
- * no history file. Driven by the SAME MYCAMP_* env vars as the real scrape
- * (falling back to conditions.json for anything not overridden), so only
- * values that are actually part of the configured search conditions can be
- * exercised here — no extra ad-hoc fields like a specific accommodation id.
+ * no history file (though it may update src/config/campsites.json if it
+ * resolves any campsite this run hasn't seen before). Driven by the SAME
+ * MYCAMP_* env vars as the real scrape (falling back to conditions.json for
+ * anything not overridden), so only values that are actually part of the
+ * configured search conditions can be exercised here — no extra ad-hoc
+ * fields like a specific accommodation id.
  *
  * Usage:
  *   MYCAMP_ADULTS=2 MYCAMP_CHILDREN_AGES=2,5 \
@@ -27,14 +34,17 @@ async function main(): Promise<void> {
 
   const scrapedAt = new Date().toISOString();
   let totalRaw = 0;
+  const campsiteDirectory = loadCampsiteDirectory();
 
   for (const window of windows) {
     const result = await searchWindow(window, conditions);
     totalRaw += result.accommodations.length;
 
-    const matches = result.accommodations
-      .map((raw) => toCampMatch(raw, window, scrapedAt))
-      .filter((m): m is NonNullable<typeof m> => m !== null);
+    const matches = (
+      await Promise.all(
+        result.accommodations.map((raw) => toCampMatch(raw, window, scrapedAt, campsiteDirectory)),
+      )
+    ).filter((m): m is NonNullable<typeof m> => m !== null);
     const filtered = filterMatches(matches, conditions);
 
     console.log(
@@ -47,6 +57,7 @@ async function main(): Promise<void> {
     if (filtered.length > 0) console.log(JSON.stringify(filtered, null, 2));
   }
 
+  saveCampsiteDirectory(campsiteDirectory);
   console.log(`[debug-search] done. ${totalRaw} raw result(s) across all windows.`);
 }
 

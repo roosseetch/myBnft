@@ -1,7 +1,12 @@
 import { loadConditions } from './config/conditions.js';
 import { generateDateWindows } from './search/dateWindows.js';
 import { filterMatches } from './search/filterAccommodations.js';
-import { searchWindow, toCampMatch } from './api/campingCare.js';
+import {
+  searchWindow,
+  toCampMatch,
+  loadCampsiteDirectory,
+  saveCampsiteDirectory,
+} from './api/campingCare.js';
 import { readHistory, mergeMatches, writeHistory } from './storage/history.js';
 import type { CampMatch, HistoryFile } from './types.js';
 
@@ -37,16 +42,18 @@ export async function runScrape(history: HistoryFile): Promise<HistoryFile> {
   const fresh: CampMatch[] = [];
   const scrapedAt = new Date().toISOString();
   let fallbackUsed = false;
+  const campsiteDirectory = loadCampsiteDirectory();
 
   for (const window of windows) {
     const result = await searchWindow(window, conditions);
     fallbackUsed ||= result.usedLumpedFallback;
     for (const raw of result.accommodations) {
-      const match = toCampMatch(raw, window, scrapedAt);
+      const match = await toCampMatch(raw, window, scrapedAt, campsiteDirectory);
       if (match) fresh.push(match);
     }
     await sleep(DELAY_MS);
   }
+  saveCampsiteDirectory(campsiteDirectory);
 
   const filtered = filterMatches(fresh, conditions);
   console.log(

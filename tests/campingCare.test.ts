@@ -5,10 +5,12 @@ import {
   buildLocationUrl,
   extractAdminId,
   lumpedAgeCategories,
+  resolveCampsite,
   searchWindow,
   splitAgeCategories,
   toCampMatch,
 } from '../src/api/campingCare.js';
+import type { CampsiteDirectory } from '../src/api/campingCare.js';
 import type { DateWindow } from '../src/types.js';
 
 const window: DateWindow = { arrival: '2026-07-16', departure: '2026-07-18', durationNights: 2 };
@@ -142,11 +144,59 @@ describe('extractAdminId', () => {
   });
 });
 
+describe('resolveCampsite', () => {
+  it('returns a cached directory entry without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    const directory: CampsiteDirectory = { '55': { slug: 'test-slug', name: 'Test Campsite' } };
+    const result = await resolveCampsite('55', directory, fetchMock as any);
+    expect(result).toEqual({ slug: 'test-slug', name: 'Test Campsite' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a cached negative entry (null) without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    const directory: CampsiteDirectory = { '55': null };
+    const result = await resolveCampsite('55', directory, fetchMock as any);
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('resolves and caches an active administration from the API', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ name: 'TCS Camping Salavaux Plage', slug: 'tcs-camping-salavaux-plage', status: 'active' }),
+    );
+    const directory: CampsiteDirectory = {};
+    const result = await resolveCampsite('2580', directory, fetchMock as any);
+    expect(result).toEqual({ slug: 'tcs-camping-salavaux-plage', name: 'TCS Camping Salavaux Plage' });
+    expect(directory['2580']).toEqual(result);
+  });
+
+  it('caches a null for an inactive administration instead of treating it as resolved', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ name: 'Some Closed Site', slug: 'some-closed-site', status: 'inactive' }),
+    );
+    const directory: CampsiteDirectory = {};
+    const result = await resolveCampsite('9999', directory, fetchMock as any);
+    expect(result).toBeNull();
+    expect(directory['9999']).toBeNull();
+  });
+
+  it('caches a null when the API call fails (e.g. unknown administration)', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ error: 'not found' }, 404));
+    const directory: CampsiteDirectory = {};
+    const result = await resolveCampsite('9999', directory, fetchMock as any);
+    expect(result).toBeNull();
+    expect(directory['9999']).toBeNull();
+  });
+});
+
 describe('toCampMatch', () => {
-  it('builds a CampMatch, falling back gracefully when the admin id is not in campsites.json', () => {
+  it('builds a CampMatch using a known campsite from the directory', async () => {
     // "id" is the API's opaque string id — accommodationId must come from numeric_id (see bug below).
-    // admin 55 is not a real admin id, so this exercises the "unknown campsite" fallback path.
-    const match = toCampMatch(
+    const directory: CampsiteDirectory = {
+      '55': { slug: 'tcs-camping-test', name: 'TCS Camping Test' },
+    };
+    const match = await toCampMatch(
       {
         id: 'acc_991',
         numeric_id: 991,
@@ -158,6 +208,38 @@ describe('toCampMatch', () => {
       },
       window,
       '2026-07-14T06:00:00.000Z',
+      directory,
+    );
+    expect(match).toMatchObject({
+      adminId: '55',
+      locationName: 'TCS Camping Test',
+      locationUrl: 'https://camping.tcs.ch/de/campingplaetze/tcs-camping-test/',
+      accommodationId: 991,
+      name: 'Family Pod',
+      category: 'pod',
+      personsMax: 4,
+      priceTotal: 210.5,
+      currency: 'CHF',
+      bookingUrl: 'https://booking.camping.care/tcs-camping-test/accommodations/991?accommodation=991',
+    });
+  });
+
+  it('falls back gracefully when the admin id is not resolvable', async () => {
+    // admin 55 pre-seeded as a known negative so this doesn't hit the network.
+    const directory: CampsiteDirectory = { '55': null };
+    const match = await toCampMatch(
+      {
+        id: 'acc_991',
+        numeric_id: 991,
+        name: 'Family Pod',
+        category: 'pod',
+        persons_max: 4,
+        price_total: 210.5,
+        thumbnail: 'https://cdn.camping.care/administration/55/p.jpg',
+      },
+      window,
+      '2026-07-14T06:00:00.000Z',
+      directory,
     );
     expect(match).toMatchObject({
       adminId: '55',
@@ -173,17 +255,20 @@ describe('toCampMatch', () => {
     });
   });
 
-  it('returns null when numeric_id is missing (regression: "id" is always a string, never the numeric id)', () => {
+  it('returns null when numeric_id is missing (regression: "id" is always a string, never the numeric id)', async () => {
     expect(
-      toCampMatch(
+      await toCampMatch(
         { id: 'acc_1', thumbnail: 'https://cdn.camping.care/administration/55/p.jpg' },
         window,
         '2026-07-14T06:00:00.000Z',
+        {},
       ),
     ).toBeNull();
   });
 
-  it('returns null when the campsite id cannot be derived', () => {
-    expect(toCampMatch({ id: 'acc_1', numeric_id: 1 }, window, '2026-07-14T06:00:00.000Z')).toBeNull();
+  it('returns null when the campsite id cannot be derived', async () => {
+    expect(
+      await toCampMatch({ id: 'acc_1', numeric_id: 1 }, window, '2026-07-14T06:00:00.000Z', {}),
+    ).toBeNull();
   });
 });
