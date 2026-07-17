@@ -64,6 +64,15 @@ describe('filterMatches', () => {
     );
     expect(kept.map((m) => m.name)).toEqual(['Bungalow']);
   });
+
+  it('drops zero-priced matches (stale "available" data from an admin record that never got deactivated)', () => {
+    const kept = filterMatches(
+      [match({ priceTotal: 0 }), match({ priceTotal: 310 })],
+      conditions,
+    );
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.priceTotal).toBe(310);
+  });
 });
 
 describe('mergeMatches', () => {

@@ -25,8 +25,14 @@ export function isExcludedName(name: string, excludedNameSubstrings: string[]): 
 
 /**
  * Keep matches that (a) are not in an excluded category, (b) are not an
- * excluded specific accommodation name, and (c) can sleep the whole family —
- * capacity derived from the effective conditions at query time.
+ * excluded specific accommodation name, (c) can sleep the whole family —
+ * capacity derived from the effective conditions at query time — and (d)
+ * have a real price. priceTotal === 0 is not a genuine free stay; it's the
+ * API still returning "available" stock for a campsite whose own admin
+ * record is stale (observed case: a campsite that closed permanently over a
+ * year ago, but its camping.care administration is still marked "active" —
+ * see git history). There is intentionally no config field for this: it's a
+ * sanity check on the data, not a search preference.
  */
 export function filterMatches(
   matches: CampMatch[],
@@ -37,6 +43,7 @@ export function filterMatches(
     (m) =>
       !isExcludedCategory(m.category, conditions.excludedCategories) &&
       !isExcludedName(m.name, conditions.excludedNames) &&
-      m.personsMax >= minCapacity,
+      m.personsMax >= minCapacity &&
+      m.priceTotal > 0,
   );
 }
